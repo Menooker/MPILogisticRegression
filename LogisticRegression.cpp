@@ -159,6 +159,7 @@ void slave_main(uint32_t tid)
 		#pragma omp parallel for num_threads(THREAD_NUM)
 		for (int i = 0; i < THREAD_NUM; i++)
 		{
+			//for each thread, calculate on part of the data, and output the gradient over each part of the data
 			float* thread_local_data;
 			float* thread_local_label;
 			float* thread_test_data;
@@ -169,6 +170,7 @@ void slave_main(uint32_t tid)
 				local_grad_arr[i], loss + i);
 		}
 
+		//sum up the threads' loss and the gradient
 		for (int i = 1; i < THREAD_NUM; i++)
 		{
 			loss[0] += loss[i];
@@ -178,6 +180,7 @@ void slave_main(uint32_t tid)
 		}
 		float dummy;
 
+		//send the loss and gradient to Parameter Server
 		Clock(&local_grad_arr[0][0],g_param_len,loss[0],local_param);
 		//MPI_Reduce(&loss[0] , &dummy ,1, MPI_FLOAT , MPI_SUM ,0, MPI_COMM_WORLD );
 		//std::cout << "grad=" << local_grad_arr[0][0] <<" loss=" <<loss[0] << std::endl;
