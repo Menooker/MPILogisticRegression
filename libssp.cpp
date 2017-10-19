@@ -160,7 +160,7 @@ namespace libssp
 		clocks.resize(num_slaves,0);
 	}
 
-
+	
 	void Clock(float* grad,int size, float loss,float* outparam)
 	{
 		MPI_Send(grad,size,MPI_FLOAT,0,MPI_TAG_GRAD,MPI_COMM_WORLD);

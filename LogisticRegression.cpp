@@ -106,7 +106,7 @@ public:
 
 
 
-
+//get the sum of gradient vector over the subset of dataset
 void slave_worker(float* thread_local_data, float* thread_local_label, int thread_point_num, 
 	float* thread_test_data, float* thread_test_label, int thread_test_num,
 	float* local_grad, float* local_loss)
@@ -137,17 +137,19 @@ void slave_worker(float* thread_local_data, float* thread_local_label, int threa
 
 void slave_main(uint32_t tid)
 {
-	g_param_len = g_param_len;
-
+	//local gradients for all threads
 	float** local_grad_arr = new float*[THREAD_NUM];
+	//the parameter vector shared by all threads
 	local_param = new float[g_param_len];
 	memset(local_param, 0, sizeof(float)*g_param_len);
+	//loss of all threads
 	float* loss = new float[THREAD_NUM];
 	local_dataset.Load(g_param_len, g_num_points, rank);
 	
 	int thread_point_num = local_dataset.local_train_size / THREAD_NUM;
 	int thread_test_num = local_dataset.local_testset_size / THREAD_NUM;
 	
+	//get the initial parameters
 	MPI_Bcast(local_param,g_param_len,MPI_FLOAT,0,MPI_COMM_WORLD);
 
 	for (int i = 0; i < THREAD_NUM; i++)
@@ -156,6 +158,7 @@ void slave_main(uint32_t tid)
 	}
 	for (int itr = 0; itr < ITER_NUM; itr++)
 	{
+		//get gradients in parallel
 		#pragma omp parallel for num_threads(THREAD_NUM)
 		for (int i = 0; i < THREAD_NUM; i++)
 		{
@@ -198,16 +201,19 @@ void slave_main(uint32_t tid)
 
 void master()
 {
+	//fill in the initial parameter vector with random values
 	float* g_param= new float[g_param_len];
 	for(int i=0;i<g_param_len;i++)
 		g_param[i]=(float) (rand()%100) / 100000; 
 	float dummy=0,outloss;
 	
+	//broadcast the initial parameter vector
 	MPI_Bcast(g_param,g_param_len,MPI_FLOAT,0,MPI_COMM_WORLD);
 
 	auto t = std::chrono::system_clock::now();
 
 	auto t2 = std::chrono::system_clock::now();
+	//call the parameter server entry function
 	ParameterServer(num_nodes-1,ITER_NUM,g_param,g_param_len,4,[&](int itr,float loss)
 		{
 			std::cout << "Iter"<<itr<<" took "<<
@@ -226,11 +232,11 @@ int main(int argc, char *argv[]){
  	HelperInitCluster(argc, argv);
  	MPI_Comm_size( MPI_COMM_WORLD, &num_nodes );
 
-
+ 	//initialize the parameter with program arguments
 	g_param_len = HelperGetParamInt("num_param");
 	g_num_points = HelperGetParamInt("num_points");
 	PATH = HelperGetParam("path");
-		///*
+	
 	ITER_NUM = HelperGetParamInt("iter_num"); 
 	THREAD_NUM = HelperGetParamInt("thread_num");
 	step_size = HelperGetParamDouble( "step_size"); 
